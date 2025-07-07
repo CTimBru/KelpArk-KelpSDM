@@ -15,22 +15,28 @@ wd <- "/Users/jerelynlee/Documents/GitHub/KelpArk-KelpSDM/"
 setwd(wd)
 
 #Check the names of the available layers
-available_layers <- list_layers()
-#Surface: Ocean Temperature, Salinity, Sea Water Velocity, Nitrate, Silicate,
-#Photosynthetic Available Radiation, Disolved Molecular Oxygen, pH, Iron
-#Additional: Topographic/Terrain?
+#available_layers <- list_layers()
 #Benthic Temperature: Ocean Temperature
-datasets <- c('thetao_baseline_2000_2019_depthsurf',
-              'so_baseline_2000_2019_depthsurf',
-              'sws_baseline_2000_2019_depthsurf',
-              'no3_baseline_2000_2018_depthsurf',
-              'si_baseline_2000_2018_depthsurf',
-              'par_mean_baseline_2000_2020_depthsurf',
-              'o2_baseline_2000_2018_depthsurf',
-              'ph_baseline_2000_2018_depthsurf',
-              'dfe_baseline_2000_2018_depthsurf',
-              'thetao_baseline_2000_2019_depthmax',
-              'terrain_characteristics')
+datasets_current <- c('thetao_baseline_2000_2019_depthsurf', #Surface Temperature
+              'so_baseline_2000_2019_depthsurf', #Salinity
+              'sws_baseline_2000_2019_depthsurf', #Sea Water Velocity
+              'no3_baseline_2000_2018_depthsurf', #Nitrate
+              'chl_baseline_2000_2018_depthsurf', #Phosphate
+              'si_baseline_2000_2018_depthsurf', #Silicate
+              'o2_baseline_2000_2018_depthsurf', #Dissolved Molecular Oxygen
+              'dfe_baseline_2000_2018_depthsurf', #Iron
+              'par_mean_baseline_2000_2020_depthsurf', #Photosynthetic Available Radiation
+              'chl_baseline_2000_2018_depthsurf', #Chlorophyll
+              'phyc_baseline_2000_2020_depthsurf', #Primary Productivity
+              'ph_baseline_2000_2018_depthsurf', #pH
+              'clt_baseline_2000_2020_depthsurf', #Cloud Cover
+              'mlotst_baseline_2000_2019_depthsurf', #Mixed Layer Depth
+              'tas_baseline_2000_2020_depthsurf', #Air Temperature
+              'kdpar_mean_baseline_2000_2020_depthsurf', #Diffuse Attenuation
+              'thetao_baseline_2000_2019_depthmax' #Max Depth Temperature
+              )
+              
+#'terrain_characteristics' # Topographic (Hande separately)
 
 datasetsssp <- c('dfe_ssp126_2020_2100_depthmean',
 'no3_ssp126_2020_2100_depthmean',
@@ -60,11 +66,9 @@ names(constraints) <- c("time", "latitude", "longitude")
 
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
 
-variables <- c("so_min", "so_max", "so_mean")
-layers <- download_layers(dataset_id, variables, constraints)
-
 for(dataset_id in datasets){
   print(dataset_id)
+  
   #download_layers(dataset_id, variables, constraints, fmt = "raster", directory = dir)
 }
 dir <- wd
