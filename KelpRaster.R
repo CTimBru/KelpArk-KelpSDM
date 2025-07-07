@@ -1,6 +1,3 @@
-rm(list=ls())
-require(data.table)
-require(raster)
 require(sf)
 require(terra)
 require(devtools)
@@ -13,7 +10,9 @@ set.seed(1)
 
 #Set working directory
 #RVar_wd should be stored in rvar/var.R
-setwd(RVar_wd)
+#setwd(RVar_wd)
+wd <- "/Users/jerelynlee/Documents/GitHub/KelpArk-KelpSDM/"
+setwd(wd)
 
 #Check the names of the available layers
 #available_layers <- list_layers()
@@ -39,6 +38,19 @@ datasets_current <- c('thetao_baseline_2000_2019_depthsurf', #Surface Temperatur
               
 #'terrain_characteristics' # Topographic (Hande separately)
 
+datasetsssp <- c('dfe_ssp126_2020_2100_depthmean',
+'no3_ssp126_2020_2100_depthmean',
+'thetao_ssp126_2020_2100_depthmean',
+'ph_ssp126_2020_2100_depthmean',
+'po4_ssp126_2020_2100_depthmean',
+'phyc_ssp126_2020_2100_depthmean',
+'so_ssp126_2020_2100_depthmean',
+'sws_ssp126_2020_2100_depthmean',
+'si_ssp126_2020_2100_depthmean')
+
+available_layers <- list_layers()
+dataset_id <- "so_baseline_2000_2019_depthmax"
+
 time <- c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z')
 #Slightly larger than required:
 #22.89 - 46.25
@@ -46,38 +58,28 @@ latitude <- c(22.80, 46.30)
 #-124.5 - -144.1
 longitude <- c(-124.60, -114.00)
 constraints <- list(time, latitude, longitude)
+latitude <- c(22.89, 46.25)
+longitude <- c(-124.5, -114.1)
 
+constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
 
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
-
-variables <- c(paste(layer_id,"mean",sep="")) #variable names
 
 for(dataset_id in datasets){
   print(dataset_id)
   
   #download_layers(dataset_id, variables, constraints, fmt = "raster", directory = dir)
 }
+dir <- wd
+download_layers(dataset_id, variables, constraints, fmt = "csv", directory = dir)
+
+download_layers(dataset_id, variables, constraints, fmt = "raster", directory = dir)
+
+
+
+#Set random number string
+set.seed(1)
 
 #Set Pacific area boundaries 46.25N and 22.89N latitude ymin and ymax, and then -124.5W and -114.1W longitude xmin and xmax.
 Pacific <- st_bbox(c(xmin=-124.5,xmax=-114.1,ymin=22.89,ymax=46.25))
-
-
-#Get a list of all environmental map layers with the file extension .nc (NetCDF)
-map_layers <- list.files(path="MapLayers",pattern = "\\.nc$")
-
-#Convert all of the NetCDF map layers from Bio-Oracle into clipped rasters in tif format.
-for(map_layer in map_layers){
-  #Read in marine layer
-  marine_layer <- brick(paste("MapLayers/",map_layer,sep=""))
-  #Get base file name
-  map_layer_name <- gsub("\\.nc$","", map_layer)
-  #Convert from NetCDF to tif format.
-  writeRaster(marine_layer, paste("MapLayers/",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
-  #Read in tiff formatted raster.
-  marine_raster <- raster(paste("MapLayers/",map_layer_name,".tif",sep=""))
-  #Crop the raster to the Pacific extent.
-  pacific_raster <- crop(marine_raster,Pacific)
-  #Export the Pacific cropped raster.
-  writeRaster(pacific_raster,paste("MapLayers/Pacific_",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
- }
