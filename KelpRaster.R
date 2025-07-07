@@ -13,9 +13,7 @@ set.seed(1)
 
 #Set working directory
 #RVar_wd should be stored in rvar/var.R
-#setwd(RVar_wd)
-wd <- "/Users/jerelynlee/Documents/GitHub/KelpArk-KelpSDM/"
-setwd(wd)
+setwd(RVar_wd)
 
 #Check the names of the available layers
 #available_layers <- list_layers()
