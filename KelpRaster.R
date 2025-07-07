@@ -46,7 +46,8 @@ datasetsssp <- c('dfe_ssp126_2020_2100_depthmean',
 'phyc_ssp126_2020_2100_depthmean',
 'so_ssp126_2020_2100_depthmean',
 'sws_ssp126_2020_2100_depthmean',
-'si_ssp126_2020_2100_depthmean')
+'si_ssp126_2020_2100_depthmean',
+'dfe_ssp245_2020_2100_depthmean')
 
 available_layers <- list_layers()
 dataset_id <- "so_baseline_2000_2019_depthmax"
