@@ -4,18 +4,29 @@ require(raster)
 require(sf)
 require(terra)
 require(devtools)
+#devtools::install_github("bio-oracle/biooracler")
 require(biooracler)
+source("rvar/var.R")
 
 #Set working directory
-wd <- "/Users/jerelynlee/Documents/GitHub/KelpArk-KelpSDM/"
-setwd(wd)
+#RVar_wd should be stored in rvar/var.R
+setwd(RVar_wd)
 
-available_layers <- list_layers()
+#Check the names of the available layers
+#available_layers <- list_layers()
+#Surface: Ocean Temperature, Salinity, Sea Water Velocity, Nitrate, Silicate,
+#Photosynthetic Available Radiation, Disolved Molecular Oxygen, pH, Iron
+#Additional: Topographic/Terrain?
+#Benthic Temperature: Ocean Temperature
+
 dataset_id <- "so_baseline_2000_2019_depthmax"
 
 time <- c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z')
-latitude <- c(22.89, 46.25)
-longitude <- c(-124.5, -114.1)
+#Slightly larger than required:
+#22.89 - 46.25
+latitude <- c(22.80, 46.30)
+#-124.5 - -144.1
+longitude <- c(-124.60, -114.00)
 
 constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
