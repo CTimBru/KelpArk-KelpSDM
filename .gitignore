@@ -1,5 +1,6 @@
 # Hidden Variables (See readme)
 rvar/
+ncTemp/
 
 # History files
 .Rhistory
