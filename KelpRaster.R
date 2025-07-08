@@ -40,6 +40,7 @@ datasets_current <- c('thetao_baseline_2000_2019_depthsurf', #Surface Temperatur
 #'terrain_characteristics' # Topographic (Hande separately)
 
 datasetsssp <- c('dfe_ssp126_2020_2100_depthmean',
+               'o2_ssp126_2020_2100_depthmean',
 'no3_ssp126_2020_2100_depthmean',
 'thetao_ssp126_2020_2100_depthmean',
 'ph_ssp126_2020_2100_depthmean',
@@ -47,7 +48,27 @@ datasetsssp <- c('dfe_ssp126_2020_2100_depthmean',
 'phyc_ssp126_2020_2100_depthmean',
 'so_ssp126_2020_2100_depthmean',
 'sws_ssp126_2020_2100_depthmean',
-'si_ssp126_2020_2100_depthmean')
+'si_ssp126_2020_2100_depthmean',
+'dfe_ssp245_2020_2100_depthmean',
+'o2_ssp245_2020_2100_depthmean',
+'no3_ssp245_2020_2100_depthmean',
+'thetao_ssp245_2020_2100_depthmean',
+'ph_ssp245_2020_2100_depthmean',
+'po4_ssp245_2020_2100_depthmean',
+'phyc_ssp245_2020_2100_depthmean',
+'so_ssp245_2020_2100_depthmean',
+'sws_ssp245_2020_2100_depthmean',
+'si_ssp245_2020_2100_depthmean',
+'dfe_ssp585_2020_2100_depthmean',
+'o2_ssp585_2020_2100_depthmean',
+'no3_ssp585_2020_2100_depthmean',
+'thetao_ssp585_2020_2100_depthmean',
+'ph_ssp585_2020_2100_depthmean',
+'po4_ssp585_2020_2100_depthmean',
+'phyc_ssp585_2020_2100_depthmean',
+'so_ssp585_2020_2100_depthmean',
+'sws_ssp585_2020_2100_depthmean',
+'si_ssp585_2020_2100_depthmean')
 
 available_layers <- list_layers()
 dataset_id <- "so_baseline_2000_2019_depthmax"
