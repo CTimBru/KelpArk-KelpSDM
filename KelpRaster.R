@@ -20,10 +20,10 @@ setwd(RVar_wd)
 set.seed(1)
 
 #Check the names of the available layers
-#available_layers <- list_layers()
+available_layers <- list_layers()
 
-#Data Set of Current Condition variables, which change with respect to time
-datasets_current <- c('chl_baseline_2000_2018_depthsurf', #Chlorophyll
+#Data Set of variables, which change with respect to time
+datasets_temporal <- c('chl_baseline_2000_2018_depthsurf', #Chlorophyll
 				'clt_baseline_2000_2020_depthsurf', #Cloud Cover
 				'dfe_baseline_2000_2018_depthsurf', #Iron
 				'mlotst_baseline_2000_2019_depthsurf', #Mixed Layer Depth
@@ -37,16 +37,7 @@ datasets_current <- c('chl_baseline_2000_2018_depthsurf', #Chlorophyll
 				'sws_baseline_2000_2019_depthsurf', #Sea Water Velocity
 				'tas_baseline_2000_2020_depthsurf', #Air Temperature
 				'thetao_baseline_2000_2019_depthsurf', #Surface Temperature min, mean, max
-				'thetao_baseline_2000_2019_depthmax' #Max Depth Temperature
-				)
-				
-# (Handle separately- Statics)
-#'terrain_characteristics' # Topographic
-#'par_mean_baseline_2000_2020_depthsurf' #Photosynthetic Available Radiation
-#'kdpar_mean_baseline_2000_2020_depthsurf' #Diffuse Attenuation
-
-#Data Set of all Future Condition variables, which change with respect to time, for three SSP
-datasets_ssp <- c(
+				'thetao_baseline_2000_2019_depthmax', #Max Depth Temperature
 				#SSP126 Middle Road
 				'chl_ssp126_2020_2100_depthsurf', #Chlorophyll
 				'clt_ssp126_2020_2100_depthsurf', #Cloud Cover
@@ -96,35 +87,57 @@ datasets_ssp <- c(
 				'thetao_ssp585_2020_2100_depthsurf', #Surface Temperature
 				'thetao_ssp585_2020_2100_depthmax' #Max Depth Temperature
 				)
+				
+#Data Set for static data, not calculated for SSP
+datasets_static <- c(
+        'terrain_characteristics', # Topographic
+        'par_mean_baseline_2000_2020_depthsurf', #Photosynthetic Available Radiation
+        'kdpar_mean_baseline_2000_2020_depthsurf' #Diffuse Attenuation
+				)
 
-time <- c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z')
 #Slightly larger than required:
 #22.89 - 46.25
 latitude <- c(22.80, 46.30)
 #-124.5 - -144.1
 longitude <- c(-124.60, -114.00)
 
-constraints <- list(time, latitude, longitude)
-names(constraints) <- c("time", "latitude", "longitude")
-
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
-
 
 #Logic Needs adjusting to handle future decades, three separate ssp
 layer_names <- c()
 i<-1
-for(dataset_id in datasets_current){
-  variables <- c(paste(str_extract(dataset_id, regex("([^_]+)")),"_mean",sep=""))
-  layer_names[i] <- paste(str_extract(time[1],regex("([^-]+)")),"_",str_extract(time[2],regex("([^-]+)")),
-                          "_",variables[1],sep="")
-  if(layer_names[i] == "2000_2010_thetao_mean"){
-    layer_names[i] <- paste(layer_names[i],"_",str_extract(dataset_id, regex("([^_]+)$")),sep="")
+for(dataset_id in datasets_temporal){
+  #Get which model name: baseline, ssp126, ssp245, ssp585
+  model_var <- strsplit(dataset_id,"_")[[1]][[1]]
+  model_name <- strsplit(dataset_id,"_")[[1]][[2]]
+  model_year <- strtoi(strsplit(dataset_id,"_")[[1]][[3]])
+  model_depth <- strsplit(dataset_id,"_")[[1]][[5]]
+  variables <- c(paste(model_var,"_mean",sep=""))
+  
+  if(model_name == "baseline") {
+    model_year_max <- model_year+10
+  } else {
+    model_year_max <- model_year+70
   }
-  download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
-  nc_files_table <- file.info(list.files(nc_dir,pattern="*.nc", full.names = T))
-  latest_file <- rownames(nc_files_table)[which.max(nc_files_table$ctime)]
-  file.rename(latest_file,paste(nc_dir,"/",layer_names[i],".nc",sep=""))
-  i <- i+1
+  
+  while(model_year <= model_year_max){
+    print(model_year)
+    #Year Dependent Stuff
+    model_year_string <- paste(model_year,'-01-01T00:00:00Z',sep='')
+    #Get select a year of interest
+    time <- c(model_year_string,model_year_string)
+    constraints <- list(time, latitude, longitude)
+    names(constraints) <- c("time", "latitude", "longitude")
+    layer_names[i] <- paste(model_name,"_",model_year,"_",
+                            model_year+10,
+                            "_",variables[1],"_",model_depth,sep="")
+    download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
+    nc_files_table <- file.info(list.files(nc_dir,pattern="*.nc", full.names = T))
+    latest_file <- rownames(nc_files_table)[which.max(nc_files_table$ctime)]
+    file.rename(latest_file,paste(nc_dir,"/",layer_names[i],".nc",sep=""))
+    i <- i+1
+    model_year <- model_year + 10
+  }
 }
 
 #Set Pacific area boundaries 46.25N and 22.89N latitude ymin and ymax, and then -124.5W and -114.1W longitude xmin and xmax.
