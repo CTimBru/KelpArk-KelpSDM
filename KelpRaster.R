@@ -144,20 +144,20 @@ for(dataset_id in datasets_temporal){
 Pacific <- st_bbox(c(xmin=-124.5,xmax=-114.1,ymin=22.89,ymax=46.25))
 
 #Get a list of all environmental map layers with the file extension .nc (NetCDF)
-map_layers <- list.files(path="MapLayers",pattern = "\\.nc$")
+map_layers <- list.files(path="ncTemp",pattern = "\\.nc$")
 
 #Convert all of the NetCDF map layers from Bio-Oracle into clipped rasters in tif format.
 for(map_layer in map_layers){
   #Read in marine layer
-  marine_layer <- brick(paste("MapLayers/",map_layer,sep=""))
+  marine_layer <- brick(paste("ncTemp/",map_layer,sep=""))
   #Get base file name
   map_layer_name <- gsub("\\.nc$","", map_layer)
   #Convert from NetCDF to tif format.
-  writeRaster(marine_layer, paste("MapLayers/",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
+  writeRaster(marine_layer, paste("MapLayers/NC_",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
   #Read in tiff formatted raster.
-  marine_raster <- raster(paste("MapLayers/",map_layer_name,".tif",sep=""))
+  marine_raster <- raster(paste("MapLayers/NC_",map_layer_name,".tif",sep=""))
   #Crop the raster to the Pacific extent.
   pacific_raster <- crop(marine_raster,Pacific)
   #Export the Pacific cropped raster.
-  writeRaster(pacific_raster,paste("MapLayers/Pacific_",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
+  writeRaster(pacific_raster,paste("MapLayers/",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
 }
