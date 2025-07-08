@@ -96,7 +96,7 @@ datasets_ssp <- c(
 				'thetao_ssp585_2020_2100_depthsurf', #Surface Temperature
 				'thetao_ssp585_2020_2100_depthmax' #Max Depth Temperature
 				)
-
+#2000 is 2000-2010, 2101 is 2010-2020
 time <- c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z')
 #Slightly larger than required:
 #22.89 - 46.25
@@ -108,7 +108,6 @@ constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
 
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
-
 
 #Logic Needs adjusting to handle future decades, three separate ssp
 layer_names <- c()
