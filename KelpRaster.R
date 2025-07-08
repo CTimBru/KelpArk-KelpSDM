@@ -7,6 +7,7 @@ require(devtools)
 #devtools::install_github("bio-oracle/biooracler")
 require(biooracler)
 source("rvar/var.R")
+require(stringr)
 
 #Set random number string
 set.seed(1)
@@ -14,6 +15,9 @@ set.seed(1)
 #Set working directory
 #RVar_wd should be stored in rvar/var.R
 setwd(RVar_wd)
+
+#Set random number string
+set.seed(1)
 
 #Check the names of the available layers
 #available_layers <- list_layers()
@@ -90,7 +94,7 @@ datasets_ssp <- c(
 				'sws_ssp585_2020_2100_depthsurf', #Sea Water Velocity
 				'tas_ssp585_2020_2100_depthsurf', #Air Temperature
 				'thetao_ssp585_2020_2100_depthsurf', #Surface Temperature
-				'thetao_ssp585_2020_2100_depthmax' #Max Depth Temperature\
+				'thetao_ssp585_2020_2100_depthmax' #Max Depth Temperature
 				)
 
 time <- c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z')
@@ -105,14 +109,23 @@ names(constraints) <- c("time", "latitude", "longitude")
 
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
 
-for(dataset_id in datasets){
-  print(dataset_id)
-  
-  #download_layers(dataset_id, variables, constraints, fmt = "raster", directory = dir)
-}
 
-#Set random number string
-set.seed(1)
+#Logic Needs adjusting to handle future decades, three separate ssp
+layer_names <- c()
+i<-1
+for(dataset_id in datasets_current){
+  variables <- c(paste(str_extract(dataset_id, regex("([^_]+)")),"_mean",sep=""))
+  layer_names[i] <- paste(str_extract(time[1],regex("([^-]+)")),"_",str_extract(time[2],regex("([^-]+)")),
+                          "_",variables[1],sep="")
+  if(layer_names[i] == "2000_2010_thetao_mean"){
+    layer_names[i] <- paste(layer_names[i],"_",str_extract(dataset_id, regex("([^_]+)$")),sep="")
+  }
+  download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
+  nc_files_table <- file.info(list.files(nc_dir,pattern="*.nc", full.names = T))
+  latest_file <- rownames(nc_files_table)[which.max(nc_files_table$ctime)]
+  file.rename(latest_file,paste(nc_dir,"/",layer_names[i],".nc",sep=""))
+  i <- i+1
+}
 
 #Set Pacific area boundaries 46.25N and 22.89N latitude ymin and ymax, and then -124.5W and -114.1W longitude xmin and xmax.
 Pacific <- st_bbox(c(xmin=-124.5,xmax=-114.1,ymin=22.89,ymax=46.25))
