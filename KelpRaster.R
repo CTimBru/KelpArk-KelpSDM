@@ -17,61 +17,81 @@ setwd(RVar_wd)
 
 #Check the names of the available layers
 #available_layers <- list_layers()
-#Benthic Temperature: Ocean Temperature
-datasets_current <- c('thetao_baseline_2000_2019_depthsurf', #Surface Temperature
-              'so_baseline_2000_2019_depthsurf', #Salinity
-              'sws_baseline_2000_2019_depthsurf', #Sea Water Velocity
-              'no3_baseline_2000_2018_depthsurf', #Nitrate
-              'chl_baseline_2000_2018_depthsurf', #Phosphate
-              'si_baseline_2000_2018_depthsurf', #Silicate
-              'o2_baseline_2000_2018_depthsurf', #Dissolved Molecular Oxygen
-              'dfe_baseline_2000_2018_depthsurf', #Iron
-              'par_mean_baseline_2000_2020_depthsurf', #Photosynthetic Available Radiation
-              'chl_baseline_2000_2018_depthsurf', #Chlorophyll
-              'phyc_baseline_2000_2020_depthsurf', #Primary Productivity
-              'ph_baseline_2000_2018_depthsurf', #pH
-              'clt_baseline_2000_2020_depthsurf', #Cloud Cover
-              'mlotst_baseline_2000_2019_depthsurf', #Mixed Layer Depth
-              'tas_baseline_2000_2020_depthsurf', #Air Temperature
-              'kdpar_mean_baseline_2000_2020_depthsurf', #Diffuse Attenuation
-              'thetao_baseline_2000_2019_depthmax' #Max Depth Temperature
-              )
-              
-#'terrain_characteristics' # Topographic (Hande separately)
 
-datasetsssp <- c('dfe_ssp126_2020_2100_depthmean',
-               'o2_ssp126_2020_2100_depthmean',
-'no3_ssp126_2020_2100_depthmean',
-'thetao_ssp126_2020_2100_depthmean',
-'ph_ssp126_2020_2100_depthmean',
-'po4_ssp126_2020_2100_depthmean',
-'phyc_ssp126_2020_2100_depthmean',
-'so_ssp126_2020_2100_depthmean',
-'sws_ssp126_2020_2100_depthmean',
-'si_ssp126_2020_2100_depthmean',
-'dfe_ssp245_2020_2100_depthmean',
-'o2_ssp245_2020_2100_depthmean',
-'no3_ssp245_2020_2100_depthmean',
-'thetao_ssp245_2020_2100_depthmean',
-'ph_ssp245_2020_2100_depthmean',
-'po4_ssp245_2020_2100_depthmean',
-'phyc_ssp245_2020_2100_depthmean',
-'so_ssp245_2020_2100_depthmean',
-'sws_ssp245_2020_2100_depthmean',
-'si_ssp245_2020_2100_depthmean',
-'dfe_ssp585_2020_2100_depthmean',
-'o2_ssp585_2020_2100_depthmean',
-'no3_ssp585_2020_2100_depthmean',
-'thetao_ssp585_2020_2100_depthmean',
-'ph_ssp585_2020_2100_depthmean',
-'po4_ssp585_2020_2100_depthmean',
-'phyc_ssp585_2020_2100_depthmean',
-'so_ssp585_2020_2100_depthmean',
-'sws_ssp585_2020_2100_depthmean',
-'si_ssp585_2020_2100_depthmean')
+#Data Set of Current Condition variables, which change with respect to time
+datasets_current <- c('chl_baseline_2000_2018_depthsurf', #Chlorophyll
+				'clt_baseline_2000_2020_depthsurf', #Cloud Cover
+				'dfe_baseline_2000_2018_depthsurf', #Iron
+				'mlotst_baseline_2000_2019_depthsurf', #Mixed Layer Depth
+				'no3_baseline_2000_2018_depthsurf', #Nitrate
+				'o2_baseline_2000_2018_depthsurf', #Dissolved Molecular Oxygen
+				'ph_baseline_2000_2018_depthsurf', #pH
+				'phyc_baseline_2000_2020_depthsurf', #Primary Productivity
+				'po4_baseline_2000_2018_depthsurf', #Phosphate
+				'si_baseline_2000_2018_depthsurf', #Silicate
+				'so_baseline_2000_2019_depthsurf', #Salinity
+				'sws_baseline_2000_2019_depthsurf', #Sea Water Velocity
+				'tas_baseline_2000_2020_depthsurf', #Air Temperature
+				'thetao_baseline_2000_2019_depthsurf', #Surface Temperature min, mean, max
+				'thetao_baseline_2000_2019_depthmax' #Max Depth Temperature
+				)
+				
+# (Handle separately- Statics)
+#'terrain_characteristics' # Topographic
+#'par_mean_baseline_2000_2020_depthsurf' #Photosynthetic Available Radiation
+#'kdpar_mean_baseline_2000_2020_depthsurf' #Diffuse Attenuation
 
-available_layers <- list_layers()
-dataset_id <- "so_baseline_2000_2019_depthmax"
+#Data Set of all Future Condition variables, which change with respect to time, for three SSP
+datasets_ssp <- c(
+				#SSP126 Middle Road
+				'chl_ssp126_2020_2100_depthsurf', #Chlorophyll
+				'clt_ssp126_2020_2100_depthsurf', #Cloud Cover
+				'dfe_ssp126_2020_2100_depthsurf', #Iron
+				'mlotst_ssp126_2020_2100_depthsurf', #Mixed Layer Depth
+				'no3_ssp126_2020_2100_depthsurf', #Nitrate
+				'o2_ssp126_2020_2100_depthsurf', #Dissolved Molecular Oxygen
+				'ph_ssp126_2020_2100_depthsurf', #pH
+				'phyc_ssp126_2020_2100_depthsurf', #Primary Productivity
+				'po4_ssp126_2020_2100_depthsurf', #Phosphate
+				'si_ssp126_2020_2100_depthsurf', #Silicate
+				'so_ssp126_2020_2100_depthsurf', #Salinity
+				'sws_ssp126_2020_2100_depthsurf', #Sea Water Velocity
+				'tas_ssp126_2020_2100_depthsurf', #Air Temperature
+				'thetao_ssp126_2020_2100_depthsurf', #Surface Temperature
+				'thetao_ssp126_2020_2100_depthmax', #Max Depth Temperature
+				#SSP245 Regional Competition
+				'chl_ssp245_2020_2100_depthsurf', #Chlorophyll
+				'clt_ssp245_2020_2100_depthsurf', #Cloud Cover
+				'dfe_ssp245_2020_2100_depthsurf', #Iron
+				'mlotst_ssp245_2020_2100_depthsurf', #Mixed Layer Depth
+				'no3_ssp245_2020_2100_depthsurf', #Nitrate
+				'o2_ssp245_2020_2100_depthsurf', #Dissolved Molecular Oxygen
+				'ph_ssp245_2020_2100_depthsurf', #pH
+				'phyc_ssp245_2020_2100_depthsurf', #Primary Productivity
+				'po4_ssp245_2020_2100_depthsurf', #Phosphate
+				'si_ssp245_2020_2100_depthsurf', #Silicate
+				'so_ssp245_2020_2100_depthsurf', #Salinity
+				'sws_ssp245_2020_2100_depthsurf', #Sea Water Velocity
+				'tas_ssp245_2020_2100_depthsurf', #Air Temperature
+				'thetao_ssp245_2020_2100_depthsurf', #Surface Temperature
+				'thetao_ssp245_2020_2100_depthmax', #Max Depth Temperature
+				#SSP585 Drill bby Drill
+				'chl_ssp585_2020_2100_depthsurf', #Chlorophyll
+				'clt_ssp585_2020_2100_depthsurf', #Cloud Cover
+				'dfe_ssp585_2020_2100_depthsurf', #Iron
+				'mlotst_ssp585_2020_2100_depthsurf', #Mixed Layer Depth
+				'no3_ssp585_2020_2100_depthsurf', #Nitrate
+				'o2_ssp585_2020_2100_depthsurf', #Dissolved Molecular Oxygen
+				'ph_ssp585_2020_2100_depthsurf', #pH
+				'phyc_ssp585_2020_2100_depthsurf', #Primary Productivity
+				'po4_ssp585_2020_2100_depthsurf', #Phosphate
+				'si_ssp585_2020_2100_depthsurf', #Silicate
+				'so_ssp585_2020_2100_depthsurf', #Salinity
+				'sws_ssp585_2020_2100_depthsurf', #Sea Water Velocity
+				'tas_ssp585_2020_2100_depthsurf', #Air Temperature
+				'thetao_ssp585_2020_2100_depthsurf', #Surface Temperature
+				'thetao_ssp585_2020_2100_depthmax' #Max Depth Temperature\
+				)
 
 time <- c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z')
 #Slightly larger than required:
