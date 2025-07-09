@@ -185,3 +185,4 @@ for(map_layer in map_layers){
   #Export the Pacific cropped raster.
   writeRaster(pacific_raster,paste("MapLayers/",map_layer_name,".tif",sep=""), bylayer=FALSE,overwrite=TRUE)
 }
+
