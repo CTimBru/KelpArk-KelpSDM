@@ -16,11 +16,8 @@ set.seed(1)
 #RVar_wd should be stored in rvar/var.R
 setwd(RVar_wd)
 
-#Set random number string
-set.seed(1)
-
 #Check the names of the available layers
-available_layers <- list_layers()
+#available_layers <- list_layers()
 
 #Data Set of variables, which change with respect to time
 datasets_temporal <- c('chl_baseline_2000_2018_depthsurf', #Chlorophyll
@@ -119,8 +116,6 @@ constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
 download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
 
-
-
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
 
 #Logic Needs adjusting to handle future decades, three separate ssp
@@ -132,7 +127,16 @@ for(dataset_id in datasets_temporal){
   model_name <- strsplit(dataset_id,"_")[[1]][[2]]
   model_year <- strtoi(strsplit(dataset_id,"_")[[1]][[3]])
   model_depth <- strsplit(dataset_id,"_")[[1]][[5]]
-  variables <- c(paste(model_var,"_mean",sep=""))
+
+  if(model_depth == "depthsurf") {
+    if(model_var == "thetao"){
+      variables <- c(paste(model_var,"_min",sep=""),paste(model_var,"_mean",sep=""),paste(model_var,"_max",sep=""))
+    } else {
+      variables <- c(paste(model_var,"_mean",sep=""))
+    }
+  } else {
+    variables <- c(paste(model_var,"_mean",sep=""))
+  }
   
   if(model_name == "baseline") {
     model_year_max <- model_year+10

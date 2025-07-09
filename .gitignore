@@ -6,6 +6,9 @@ ncTemp/
 .Rhistory
 .Rapp.history
 
+# R Project File
+KelpArk-KelpSDM.Rproj
+
 # Session Data files
 .RData
 .RDataTmp
