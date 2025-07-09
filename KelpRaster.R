@@ -101,6 +101,26 @@ latitude <- c(22.80, 46.30)
 #-124.5 - -144.1
 longitude <- c(-124.60, -114.00)
 
+#One-Off for Photosynthetic Available Radiation
+model_year_string <- '2010-01-01T00:00:00Z'
+time <- c(model_year_string,model_year_string)
+variables <- c("par_mean_mean")
+dataset_id <- "par_mean_baseline_2000_2020_depthsurf"
+constraints <- list(time, latitude, longitude)
+names(constraints) <- c("time", "latitude", "longitude")
+download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
+
+#One-Off for Diffuse Attenuation
+model_year_string <- '2010-01-01T00:00:00Z'
+time <- c(model_year_string,model_year_string)
+variables <- c("kdpar_mean_mean")
+dataset_id <- "kdpar_mean_baseline_2000_2020_depthsurf"
+constraints <- list(time, latitude, longitude)
+names(constraints) <- c("time", "latitude", "longitude")
+download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
+
+
+
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
 
 #Logic Needs adjusting to handle future decades, three separate ssp
