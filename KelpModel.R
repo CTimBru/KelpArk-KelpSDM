@@ -1,4 +1,19 @@
 rm(list=ls())
+require(data.table)
+require(sf)
+require(raster)
+require(stars)
+require(terra)
+require(dplyr)
+require(plyr)
+require(dismo)
+require(randomForest)
+require(DescTools)
+require(geodata)
+require(ggplot2)
+require(virtualspecies)
+require(geosphere) #distm
+require(viridis)
 source("rvar/var.R")
 
 #Set random number string
@@ -10,21 +25,71 @@ setwd(RVar_wd)
 
 #Specific taxa found in the California study area
 California_taxa <- c("nereocystis_luetkeana","macrocystis_pyrifera")
-#Designate taxon
-taxon <- "sargassum"
 
 #Intake species occurrence data from GBIF into a data table.  Use the variable name taxon in this process.
+nereocystis_occurrence_data <- fread("nereocystis_luetkeana_occurrence.csv",sep="\t")
+macrocystis_occurrence_data <- fread("macrocystis_pyrifera_occurrence.csv",sep="\t")
 
-#Convert species data to a spatial points object
 
 #Spatially thin occurrence data so that no two points are closer than 9.26 km, the resolution of Bio-Oracle data.
+nereocystis_coords <- nereocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
+macrocystis_coords <- macrocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
+
+
+#Create distance matrix to calculate distance between every point as a matrix.
+nereocystis_dist_matrix <- distm(nereocystis_coords)
+macrocystis_dist_matrix <- distm(macrocystis_coords)
+
+#Create vector that denotes if a coordinate is being kept
+nereocystis_keep <- rep(TRUE, nrow(nereocystis_dist_matrix))
+macrocystis_keep <- rep(TRUE, nrow(macrocystis_dist_matrix))
+
+#Loop through each coordinate, checking distance. If below 9.26km and not 0km (all points are 0km away from themselves)
+#CHECK IF > ZERO IS A PROBLEM!
+for (i in 1:(nrow(nereocystis_dist_matrix)-1)) {
+  if (nereocystis_keep[i]) {
+    close_points <- which(nereocystis_dist_matrix[i, ] < 9260 & nereocystis_dist_matrix[i, ] > 0)
+    nereocystis_keep[close_points] <- FALSE
+  }
+}
+for (i in 1:(nrow(macrocystis_dist_matrix)-1)) {
+  if (macrocystis_keep[i]) {
+    close_points <- which(macrocystis_dist_matrix[i, ] < 9260 & macrocystis_dist_matrix[i, ] > 0)
+    macrocystis_keep[close_points] <- FALSE
+  }
+}
+
+#Eliminate deselected occurrence data due to proximity.
+nereocystis_occurrence_data <- nereocystis_occurrence_data[nereocystis_keep, ]
+macrocystis_occurrence_data <- macrocystis_occurrence_data[macrocystis_keep, ]
+
+#Spatially thin occurrence data removing duplicated records at same coords.
+nereocystis_coords <- nereocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
+macrocystis_coords <- macrocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
+
+#Check if any two coords are exactly equal
+nereocystis_equal_coords <- duplicated(nereocystis_coords)
+macrocystis_equal_coords <- duplicated(macrocystis_coords)
+
+#Remove duplicates
+nereocystis_occurrence_data <- nereocystis_occurrence_data[nereocystis_equal_coords, ]
+macrocystis_occurrence_data <- macrocystis_occurrence_data[macrocystis_equal_coords, ]
+
+#Convert species data to a spatial points object
+nereocystis_species_points <- st_as_sf(nereocystis_occurrence_data, coords=c("decimalLongitude","decimalLatitude"), crs = 4326)
+macrocystis_species_points <- st_as_sf(macrocystis_occurrence_data, coords=c("decimalLongitude","decimalLatitude"), crs = 4326)
+
 
 #Get lists of all current and future environmental rasters in tif format.
+list_baseline_2000 <- list.files(path="MapLayers",pattern = "^baseline_2000.*\\.tif$")
 
 #Build a raster stack of all environmental rasters.
 #Rasters are generated using https://github.com/CTimBru/KelpArk-KelpSDM/blob/main/KelpRaster.R
+env_layer <- c()
+
 
 #Update raster stack names for current and future environmental raster stacks so they match the environmental raster file names
+
 
 #Filter collinear environmental variables using current environmental raster stack.
 #Use a 0.75 Spearman correlation threshold, and 1000 background points, as per https://onlinelibrary.wiley.com/doi/pdf/10.1002/ece3.10901
