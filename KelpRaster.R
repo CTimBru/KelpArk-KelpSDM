@@ -116,6 +116,16 @@ constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
 download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
 
+#Terrain Characteristics
+model_year_string <- '1970-01-01T00:00:00Z'
+time <- c(model_year_string,model_year_string)
+variables <- c("bathymetry_mean")
+dataset_id <- "terrain_characteristics"
+constraints <- list(time, latitude, longitude)
+names(constraints) <- c("time", "latitude", "longitude")
+download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
+
+
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
 
 #Logic Needs adjusting to handle future decades, three separate ssp
@@ -123,10 +133,11 @@ layer_names <- c()
 i<-1
 for(dataset_id in datasets_temporal){
   #Get which model name: baseline, ssp126, ssp245, ssp585
-  model_var <- strsplit(dataset_id,"_")[[1]][[1]]
-  model_name <- strsplit(dataset_id,"_")[[1]][[2]]
-  model_year <- strtoi(strsplit(dataset_id,"_")[[1]][[3]])
-  model_depth <- strsplit(dataset_id,"_")[[1]][[5]]
+  split_name <- strsplit(dataset_id,"_")
+  model_var <- split_name[[1]][[1]]
+  model_name <- split_name[[1]][[2]]
+  model_year <- split_name[[1]][[3]]
+  model_depth <- split_name[[1]][[5]]
 
   if(model_depth == "depthsurf") {
     if(model_var == "thetao"){
