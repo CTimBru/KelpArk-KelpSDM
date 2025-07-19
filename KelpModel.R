@@ -17,7 +17,8 @@ require(viridis)
 source("rvar/var.R")
 
 #Set a predictable random number generator seed for reproducibility.
-set.seed(42)
+seed.number <- 42
+set.seed(seed.number)
 
 #Set working directory
 #RVar_wd should be stored in rvar/var.R
@@ -31,10 +32,6 @@ prediction_years <- c(2020,2030,2040,2050,2060,2070,2080,2090)
 
 #Specific future climate SSP of interest
 economic_pathways <- c("ssp126","ssp245","ssp585")
-
-#TEMP Select future layer
-prediction_year <- prediction_years[[1]]
-prediction_pathway <- economic_pathways[[1]]
 
 #Intake species occurrence data from GBIF into a data table.  Use the variable name taxon in this process.
 nereocystis_occurrence_data <- fread("nereocystis_luetkeana_occurrence.csv",sep="\t")
@@ -119,19 +116,14 @@ list_baseline_2010 <- list.files(path="MapLayers",pattern = "^baseline_2010.*\\.
 #Get lists of all 'permanent' environmental rasters in tif format.
 list_static <- c(list.files(path="MapLayers",pattern = "^static_.*\\.tif$"),list.files(path="MapLayers",pattern = "^terrain_.*\\.tif$"))
 
-#TEMP Get list of selected decades/pathways environmental rasters in fit format.
-list_future <- list.files(path="MapLayers",pattern = paste("^",prediction_pathway,"_",prediction_year,"_",prediction_year+10,".*\\.tif$",sep=""))
-
 #Build a raster stack of all environmental rasters.
 #Rasters are generated using https://github.com/CTimBru/KelpArk-KelpSDM/blob/main/KelpRaster.R
 env_layer_2010 <- stack(paste("MapLayers/",list_baseline_2010,sep=""))
 env_layer_static <- stack(paste("MapLayers/",list_static,sep=""))
-env_layer_future <- stack(paste("MapLayers/",list_future,sep=""))
 
 #For each list of files, get the identifying variable name, and rename layer
 i <- 1
 for(layer in list_baseline_2010){
-  print(layer)
   split_name <- strsplit(layer,"_")
   model_depth <- split_name[[1]][[length(split_name[[1]])]]
   model_stat <- split_name[[1]][[length(split_name[[1]])-1]]
@@ -139,21 +131,10 @@ for(layer in list_baseline_2010){
   list_baseline_2010[[i]] <- paste(model_var,model_stat,model_depth,sep="_")
   i <- i+1
 }
-i <- 1
-for(layer in list_future){
-  print(layer)
-  split_name <- strsplit(layer,"_")
-  model_depth <- split_name[[1]][[length(split_name[[1]])]]
-  model_stat <- split_name[[1]][[length(split_name[[1]])-1]]
-  model_var <- split_name[[1]][[length(split_name[[1]])-2]]
-  list_future[[i]] <- paste(model_var,model_stat,model_depth,sep="_")
-  i <- i+1
-}
 
 #Update raster stack names for current and future environmental raster stacks so they match the environmental layer name
 names(env_layer_2010) <- list_baseline_2010
 names(env_layer_static) <- list_static
-names(env_layer_future) <- list_future
 
 #Filter collinear environmental variables using current environmental raster stack.
 #Use a 0.75 Spearman correlation threshold, and 1000 background points, as per https://onlinelibrary.wiley.com/doi/pdf/10.1002/ece3.10901
@@ -161,31 +142,9 @@ env_retain <- removeCollinearity(env_layer_2010,method='spearman',multicollinear
 
 #Select subset of layers
 env_layer_2010 <- subset(env_layer_2010, subset=env_retain)
-env_layer_future <- subset(env_layer_future, subset=env_retain)
 
 #Build a raster stack of all current environmental rasters using just the filtered layers.
 env_layer_2010 <- stack(env_layer_2010,env_layer_static)
-
-#Build a raster stack of all future environmental rasters using just the filtered layers.
-env_layer_future <- stack(env_layer_future,env_layer_static)
-
-#Update raster stack names for current and future environmental raster stacks so they match the environmental raster file names
-i <- 1
-for(layer_name in names(env_layer_2010)){
-  if(i<length(names(env_layer_2010))-6){
-    layer_name <- paste("baseline_2010_2020_",layer_name,sep="")
-    names(env_layer_2010[[i]]) <- layer_name
-  }
-  i <- i+1
-}
-i <- 1
-for(layer_name in names(env_layer_future)){
-  if(i<length(names(env_layer_future))-6){
-    layer_name <- paste(prediction_pathway,"_",prediction_year,"_",prediction_year+10,"_",layer_name,sep="")
-    names(env_layer_future[[i]]) <- layer_name
-  }
-  i <- i+1
-}
 
 #Extract current environmental raster values at species occurrence points
 nereocystis_2010_extracted <- as.data.frame(raster::extract(env_layer_2010, nereocystis_species_points_2010))
@@ -246,8 +205,6 @@ macrocystis_2010_bg_extracted$presence <- as.factor(macrocystis_2010_bg_extracte
 
 #Model Selection
 selectedTaxa <- California_taxa[[1]]
-prediction_year
-prediction_pathway
 
 if(selectedTaxa == California_taxa[[1]]){
   presence_extracted <- nereocystis_2010_extracted
@@ -268,10 +225,13 @@ importance_list <- c()
 accuracy_list <- c()
 #Create an empty list to store partial plot outputs.
 partial_plot_list <- c()
+#Create an empty list to store the trained random forest models
+rf1_list <- c()
 j <- 1
 i <- 1
 i_max <- 100
 for(i in 1:i_max){
+  print(paste("beginning run:",i,sep=" "))
   #Create a subset of the presence/background data with the following properties:
   #1. Composed of a randomly selected 80% of rows from env_extracted.
   #2. Composed of rows randomly selected from background_extracted. The number of rows will also be 80% of rows found in env_extracted.
@@ -282,17 +242,14 @@ for(i in 1:i_max){
   #Use the presence column as the model output, and all other columns as inputs.
   rf1 <- suppressWarnings(tuneRF(x=subset_extracted[,!(colnames(subset_extracted) %in% "presence")],y=subset_extracted$presence,stepFactor=1,plot=FALSE,doBest=TRUE))
   
+  #Add the random forest to a list to be able to utilize it in future model loops
+  rf1_list[[i]] <- rf1
+  
   #Make a prediction raster, using current environmental data, from the random forest model and store it as the ith element in raster_predict_list.
   raster_predict_list[[i]] <- dismo::predict(env_layer_2010,rf1,progress='text')
-  #Plot prediction raster
-  
-  #Make a future prediction raster from the random forest model, and the future environmental raster stack as input.
-  #Store it as the ith element in future_raster_predict_list.
-  future_raster_predict_list[[i]] <- dismo::predict(env_layer_future,rf1,progress='text')
-  
   
   #Plot prediction raster
-  
+  plot(raster_predict_list[[i]])
   
   #Store relative importance of variable outputs in the random forest model in a data frame.
   tmp <- as.data.frame(rf1$importance)
@@ -334,10 +291,10 @@ raster_predict <- brick(raster_predict_list)
 raster_predict <- calc(raster_predict, sum)
 
 #Save this raster output.  Use the variable taxon in naming the file.
-writeRaster(raster_predict,paste(selectedTaxa,"_2010_2020.tif",sep=""),overwrite=T)
+writeRaster(raster_predict,paste("decadalPredictions/",selectedTaxa,"_2010_2020.tif",sep=""),overwrite=T)
+
 
 # Convert the prediction frequency raster to a data frame
-
 
 #Rename the third column of this data frame to value
 
@@ -349,11 +306,63 @@ writeRaster(raster_predict,paste(selectedTaxa,"_2010_2020.tif",sep=""),overwrite
 
 #Count the number of locations predicted to have suitable habitat.
 
-#Stack the list of future prediction rasters into a raster brick.
-
-#Sum the future prediction rasters in the raster brick into a single prediction frequency raster.
-
-#Save raster output.  Use the variable taxon in naming the file
+#Loop Through All Prediction Years & Pathways
+for(prediction_year in prediction_years) {
+  for(pathway in economic_pathways){
+    print(paste("Model Run:",prediction_year,pathway,sep=" "))
+    
+    #Get list of selected decades/pathways environmental rasters in fit format.
+    list_future <- list.files(path="MapLayers",pattern = paste("^",pathway,"_",prediction_year,"_",prediction_year+10,".*\\.tif$",sep=""))
+    
+    #Build a raster stack of all environmental rasters.
+    #Rasters are generated using https://github.com/CTimBru/KelpArk-KelpSDM/blob/main/KelpRaster.R
+    env_layer_future <- stack(paste("MapLayers/",list_future,sep=""))
+    
+    #For each list of files, get the identifying variable name, and rename layer
+    i <- 1
+    for(layer in list_future){
+      split_name <- strsplit(layer,"_")
+      model_depth <- split_name[[1]][[length(split_name[[1]])]]
+      model_stat <- split_name[[1]][[length(split_name[[1]])-1]]
+      model_var <- split_name[[1]][[length(split_name[[1]])-2]]
+      list_future[[i]] <- paste(model_var,model_stat,model_depth,sep="_")
+      i <- i+1
+    }
+    
+    #Update raster stack names for current and future environmental raster stacks so they match the environmental layer name
+    names(env_layer_future) <- list_future
+    
+    #Select subset of layers
+    env_layer_future <- subset(env_layer_future, subset=env_retain)
+    
+    #Build a raster stack of all future environmental rasters using just the filtered layers.
+    env_layer_future <- stack(env_layer_future,env_layer_static)
+    
+    j <- 1
+    i <- 1
+    i_max <- 100
+    #Create an empty list to store future prediction rasters.
+    future_raster_predict_list <- c()
+    for(i in 1:i_max){
+      print(paste("beginning run:",i,sep=" "))
+      #Make a future prediction raster from the random forest model, and the future environmental raster stack as input.
+      #Store it as the ith element in future_raster_predict_list.
+      future_raster_predict_list[[i]] <- dismo::predict(env_layer_future,rf1_list[[i]],progress='text')
+    }
+    #Stack the list raster_predict_list into a raster brick.
+    future_raster_predict <- brick(future_raster_predict_list)
+    
+    #Calculate a raster which is the sum of the layers in this raster brick.  This is the prediction frequency raster.
+    future_raster_predict <- calc(future_raster_predict, sum)
+    
+    #Save this raster output.  Use the variable taxon in naming the file.
+    writeRaster(future_raster_predict,paste("decadalPredictions/",selectedTaxa,"_",prediction_year,"_",prediction_year+10,"_",pathway,".tif",sep=""),overwrite=T)
+    
+  }
+  
+  #Plot prediction raster
+  
+}
 
 # Convert the prediction frequency raster for the future kelp model to data frame
 
@@ -373,7 +382,7 @@ writeRaster(raster_predict,paste(selectedTaxa,"_2010_2020.tif",sep=""),overwrite
 
 #Rename columns.
 
-#Convert varible importance to variable rank importance.  Make 1 correspond to the most important variable.
+#Convert variable importance to variable rank importance.  Make 1 correspond to the most important variable.
 
 #Save rank importance table.  Use the variable name taxon in naming the file.
 
