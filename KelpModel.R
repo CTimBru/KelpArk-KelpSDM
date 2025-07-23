@@ -76,35 +76,35 @@ nereocystis_coords <- nereocystis_occurrence_data[, c("decimalLongitude", "decim
 macrocystis_coords <- macrocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
 
 #Check if any two coords are exactly equal
-nereocystis_equal_coords <- duplicated(nereocystis_coords)
-macrocystis_equal_coords <- duplicated(macrocystis_coords)
+#nereocystis_equal_coords <- duplicated(nereocystis_coords)
+#macrocystis_equal_coords <- duplicated(macrocystis_coords)
 
 #Switch trues to false, we want to keep non-duplicates
-i <- 1
-for(dupe in nereocystis_equal_coords){
-  if(dupe == TRUE){
-    dupe <- FALSE
-  } else {
-    dupe <- TRUE
-  }
-  nereocystis_equal_coords[[i]] <- dupe
-  i <- i+1
-}
-i <- 1
-for(dupe in macrocystis_equal_coords){
-  if(dupe == TRUE){
-    dupe <- FALSE
-  } else {
-    dupe <- TRUE
-  }
-  macrocystis_equal_coords[[i]] <- dupe
-  i <- i+1
-}
+#i <- 1
+#for(dupe in nereocystis_equal_coords){
+  #if(dupe == TRUE){
+  #  dupe <- FALSE
+  #} else {
+  #  dupe <- TRUE
+  #}
+  #nereocystis_equal_coords[[i]] <- dupe
+  #i <- i+1
+#}
+#i <- 1
+#for(dupe in macrocystis_equal_coords){
+  #if(dupe == TRUE){
+  #  dupe <- FALSE
+  #} else {
+  #  dupe <- TRUE
+  #}
+  #macrocystis_equal_coords[[i]] <- dupe
+  #i <- i+1
+#}
 
 
 #Remove duplicates
-nereocystis_occurrence_data <- nereocystis_occurrence_data[nereocystis_equal_coords, ]
-macrocystis_occurrence_data <- macrocystis_occurrence_data[macrocystis_equal_coords, ]
+#nereocystis_occurrence_data <- nereocystis_occurrence_data[nereocystis_equal_coords, ]
+#macrocystis_occurrence_data <- macrocystis_occurrence_data[macrocystis_equal_coords, ]
 
 #Convert species data to a spatial points object
 nereocystis_species_points_2010 <- st_as_sf(nereocystis_occurrence_data, coords=c("decimalLongitude","decimalLatitude"), crs = 4326)
@@ -138,10 +138,10 @@ names(env_layer_static) <- list_static
 
 #Filter collinear environmental variables using current environmental raster stack.
 #Use a 0.75 Spearman correlation threshold, and 1000 background points, as per https://onlinelibrary.wiley.com/doi/pdf/10.1002/ece3.10901
-env_retain <- removeCollinearity(env_layer_2010,method='spearman',multicollinearity.cutoff = 0.75, sample.points = TRUE, nb.points=10000, select.variables=TRUE)
+#env_retain <- removeCollinearity(env_layer_2010,method='spearman',multicollinearity.cutoff = 0.75, sample.points = TRUE, nb.points=10000, select.variables=TRUE)
 
 #Select subset of layers
-env_layer_2010 <- subset(env_layer_2010, subset=env_retain)
+#env_layer_2010 <- subset(env_layer_2010, subset=env_retain)
 
 #Build a raster stack of all current environmental rasters using just the filtered layers.
 env_layer_2010 <- stack(env_layer_2010,env_layer_static)
@@ -293,18 +293,93 @@ raster_predict <- calc(raster_predict, sum)
 #Save this raster output.  Use the variable taxon in naming the file.
 writeRaster(raster_predict,paste("decadalPredictions/",selectedTaxa,"_2010_2020.tif",sep=""),overwrite=T)
 
-
 # Convert the prediction frequency raster to a data frame
+raster_df <- as.data.frame(raster(paste("decadalPredictions/",selectedTaxa,"_2010_2020.tif", sep="")), xy = TRUE)
 
 #Rename the third column of this data frame to value
+names(raster_df)[3] <- "value"
 
 #Remove elements from this data frame if the value column is less than or equal to the value of 0.5*i_max.
+raster_points <- subset(raster_df, value > 0.5*i_max)
 
 #Plot prediction raster
+ggplot() +
+  geom_raster(data = raster_df, aes(x = x, y = y, fill = value)) +
+  scale_fill_gradient(low = "lightblue", high = "lightblue", na.value = "grey") +
+  guides(fill = "none") +
+  geom_point(data = raster_points, aes(x = x, y = y, color = value), size = 1) +
+  scale_color_viridis_c() +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = paste("Predicted occurrences of\n",gsub("_"," ",selectedTaxa)," (2020)",sep=""),
+       x="Longitude degrees East",y = "Latitude degrees North",
+       color = paste("Predicted frequency\nout of ",i_max," models",sep=""))+
+  theme(legend.position = "bottom")
 
 #Get geographic range of predicted taxon occurrences
+RangeLong <- range(na.omit(raster_df[raster_df$value == i_max,"x"]))
+RangeLat <- range(na.omit(raster_df[raster_df$value == i_max,"y"]))
 
 #Count the number of locations predicted to have suitable habitat.
+RangePixels <- nrow(raster_df[raster_df$value == i_max,])
+
+RangeOcur <- paste("Ranges:",RangeLong," ",RangeLat," Pixels:",RangePixels,sep="")
+write(RangeOcur,paste("ModelStatistics/",selectedTaxa,"_Range.txt",sep=""))
+
+#Calculate the mean TSS for the models
+TSS_Mean <- mean(accuracy_list)
+TSS_SD <- sd(accuracy_list)
+
+TSS <- paste("TSS Mean:",TSS_Mean," TSS Standard Deviation:",TSS_SD,sep="")
+write(TSS,paste("ModelStatistics/",selectedTaxa,"_TSS.txt",sep=""))
+
+#Convert importance_list to a single data frame.
+importance_total <- rbind.fill(importance_list)
+
+#Calculate the mean relative importance for each variable in this variable importance data frame.
+importance_total <- aggregate(x=importance_total$MeanDecreaseGini, by = list(importance_total$VariableName), FUN = mean)
+
+#Rename columns.
+colnames(importance_total) <- c("VariableName","Importance")
+
+#Convert variable importance to variable rank importance.  Make 1 correspond to the most important variable.
+importance_total$Importance <- rank(desc(importance_total$Importance))
+
+#Save rank importance table.  Use the variable name taxon in naming the file.
+write.table(importance_total,paste("ModelStatistics/",selectedTaxa,"_2010_2020_Importance_List.txt",sep=""),quote=FALSE,sep="\t",row.names=FALSE)
+
+#Collapse partial plot outputs into single data frame.
+partial_plots <- rbind.fill(partial_plot_list)
+partial_plots <- as.data.frame(partial_plots)
+write.table(partial_plots,paste("ModelStatistics/",selectedTaxa,"_partial_plots.txt",sep=""),quote=FALSE,sep="\t",row.names=FALSE)
+partial_plots <- read.table(paste("ModelStatistics/",selectedTaxa,"_partial_plots.txt",sep=""), header=TRUE, sep="\t",as.is=T,skip=0,fill=TRUE,check.names=FALSE, encoding = "UTF-8")
+
+#Plot partial dependence heat maps for continuous data.
+k <- 1
+ggplot(partial_plots, aes(x=!!sym(names(env_layer_2010[[k]])), y='Detection_Probability') )+
+  xlab(names(env_layer_2010[[k]]))+ylab("Detection\nProbability")+
+  geom_bin2d(bins = 50)+
+  scale_fill_continuous(type = "viridis",name=paste("Frequency\n(Out of ",i_max," models)",sep=""))+
+  stat_smooth(aes(y = 'Detection_Probability', fill='Detection_Probability'),method="auto",formula=y~x,color="violet",fill="red",n=0.1*sum(!is.na(partial_plots[,names(env_layer_2010[[k]])])))+
+  theme_bw(base_size=25)
+
+#Levi
+partial_plots <- rbind.fill(partial_plot_list)
+partial_plots <- as.data.frame(partial_plots)
+write.table(partial_plots,paste("ModelStatistics/",selectedTaxa,"_partial_plots.txt",sep=""),quote=FALSE,sep="\t",row.names = FALSE)
+partial_plots <- read.table(paste("ModelStatistics/",selectedTaxa,"_partial_plots.txt",sep=""), header=TRUE, sep="\t",as.is=T,skip=0,fill=TRUE,check.names=FALSE, encoding = "UTF-8")
+
+#Plot partial dependence heat maps for continuous data.
+k<- 1
+for (k in k:length(names(env_layer_2010))){
+  ggplot(partial_plots, aes(x=!!sym(names(env_layer_2010[[k]])), y=`Detection_Probability`) )+
+    xlab(names(env_layer_2010[[k]]))+ylab("Detection\nProbability")+
+    geom_bin2d(bins = 50)+
+    scale_fill_continuous(type = "viridis",name=paste("Frequency\n(Out of ",i_max," models)",sep=""))+
+    stat_smooth(aes(y = `Detection_Probability`, fill='Detection_Probability'),method="auto",formula=y~x,color="violet",fill="red",n=0.1*sum(!is.na(partial_plots[,names(env_layer_2010[[k]])])))+
+    theme_bw(base_size=25)
+  ggsave(filename=paste("ModelStatistics/",selectedTaxa,"_",names(env_layer_2010[[k]]),".png",sep=""),plot=last_plot(),height=1044,width=1760,units=c("px"),dpi=100)
+}
 
 #Loop Through All Prediction Years & Pathways
 for(prediction_year in prediction_years) {
@@ -333,7 +408,7 @@ for(prediction_year in prediction_years) {
     names(env_layer_future) <- list_future
     
     #Select subset of layers
-    env_layer_future <- subset(env_layer_future, subset=env_retain)
+    #env_layer_future <- subset(env_layer_future, subset=env_retain)
     
     #Build a raster stack of all future environmental rasters using just the filtered layers.
     env_layer_future <- stack(env_layer_future,env_layer_static)
@@ -374,18 +449,23 @@ for(prediction_year in prediction_years) {
 
 #Get geographic range of predicted taxon occurrences
 
-#Calculate the mean TSS for the models
+raster_future_df <- as.data.frame(raster(paste("decadalPredictions/",selectedTaxa,"_2010_2020.tif", sep="")), xy = TRUE)
 
-#Convert importance_list to a single data frame.
+#Rename the third column of this data frame to value
+names(raster_future_df)[3] <- "value"
 
-#Calculate the mean relative importance for each variable in this variable importance data frame.
+#Remove elements from this data frame if the value column is less than or equal to the value of 0.5*i_max.
+raster_future_points <- subset(raster_future_df, value > 0.5*i_max)
 
-#Rename columns.
-
-#Convert variable importance to variable rank importance.  Make 1 correspond to the most important variable.
-
-#Save rank importance table.  Use the variable name taxon in naming the file.
-
-#Collapse partial plot outputs into single data frame.
-
-#Plot partial dependence heat maps for continuous data.
+ggplot() +
+  geom_raster(data = raster_future_df, aes(x = x, y = y, fill = value)) +
+  scale_fill_gradient(low = "lightblue", high = "lightblue", na.value = "grey") +
+  guides(fill = "none") +
+  geom_point(data = raster_future_points, aes(x = x, y = y, color = value), size = 1) +
+  scale_color_viridis_c() +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = paste("Predicted occurrences of\n",gsub("_"," ",selectedTaxa)," (2020)",sep=""),
+       x="Longitude degrees East",y = "Latitude degrees North",
+       color = paste("Predicted frequency\nout of ",i_max," models",sep=""))+
+  theme(legend.position = "bottom")
