@@ -316,16 +316,6 @@ ggplot() +
        color = paste("Predicted frequency\nout of ",i_max," models",sep=""))+
   theme(legend.position = "bottom")
 
-#Get geographic range of predicted taxon occurrences
-RangeLong <- range(na.omit(raster_df[raster_df$value == i_max,"x"]))
-RangeLat <- range(na.omit(raster_df[raster_df$value == i_max,"y"]))
-
-#Count the number of locations predicted to have suitable habitat.
-RangePixels <- nrow(raster_df[raster_df$value == i_max,])
-
-RangeOcur <- paste("Ranges:",RangeLong," ",RangeLat," Pixels:",RangePixels,sep="")
-write(RangeOcur,paste("ModelStatistics/",selectedTaxa,"_Range.txt",sep=""))
-
 #Calculate the mean TSS for the models
 TSS_Mean <- mean(accuracy_list)
 TSS_SD <- sd(accuracy_list)
@@ -448,7 +438,6 @@ for(prediction_year in prediction_years) {
 #Plot prediction raster
 
 #Get geographic range of predicted taxon occurrences
-
 raster_future_df <- as.data.frame(raster(paste("decadalPredictions/",selectedTaxa,"_2010_2020.tif", sep="")), xy = TRUE)
 
 #Rename the third column of this data frame to value
@@ -469,3 +458,39 @@ ggplot() +
        x="Longitude degrees East",y = "Latitude degrees North",
        color = paste("Predicted frequency\nout of ",i_max," models",sep=""))+
   theme(legend.position = "bottom")
+
+list_predictions <- list.files(path="decadalPredictions",pattern = "\\.tif$")
+range_list <- c()
+long_min <- c()
+long_max <- c()
+lat_min <- c()
+lat_max <- c()
+pixels <- c()
+i <- 1
+i_max <- 100
+for (i in 1:length(list_predictions)){
+  # Load each raster as a data frame
+  raster_df <- as.data.frame(raster(paste("decadalPredictions/",list_predictions[[i]],sep="")), xy = TRUE)
+  
+  #Set Column to Value
+  names(raster_df)[3] <- "value"
+  
+  #Get geographic range of predicted taxon occurrences
+  RangeLong <- range(na.omit(raster_df[raster_df$value == i_max,"x"]))
+  RangeLat <- range(na.omit(raster_df[raster_df$value == i_max,"y"]))
+  
+  #Count the number of locations predicted to have suitable habitat.
+  RangePixels <- nrow(raster_df[raster_df$value == i_max,])
+  long_min[i] <- RangeLong[[1]]
+  long_max[i] <- RangeLong[[2]]
+  lat_min[i] <- RangeLat[[1]]
+  lat_max[i] <- RangeLat[[2]]
+  pixels[i] <- RangePixels[[1]]
+  
+  range_list[i] <- list_predictions[[i]]
+  
+}
+range_df <- data.frame(range_list, long_min, long_max, lat_min, lat_max, pixels)
+
+write.csv(range_df,paste("ModelStatistics/species_range.csv",sep=""),sep="\t", row.names = FALSE)
+
