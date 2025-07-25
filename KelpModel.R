@@ -495,7 +495,7 @@ for (i in 1:length(list_predictions)){
   RangeLat <- range(na.omit(raster_df[raster_df$value == i_max,"y"]))
   
   #Count the number of locations predicted to have suitable habitat.
-  RangePixels <- nrow(raster_df[raster_df$value == i_max,])
+  RangePixels <- nrow(na.omit(raster_df[raster_df$value == i_max,]))
   long_min[i] <- RangeLong[[1]]
   long_max[i] <- RangeLong[[2]]
   lat_min[i] <- RangeLat[[1]]
