@@ -460,6 +460,21 @@ ggplot() +
   theme(legend.position = "bottom")
 
 list_predictions <- list.files(path="decadalPredictions",pattern = "\\.tif$")
+list <- strsplit(list_predictions, "_")
+name <- c()
+year1 <- c()
+year2 <- c()
+ssp <- c()
+ssps <- c()
+i<-1
+for (i in 1:50)
+{
+  name[i] <-list[[i]][1]
+  year1[i] <- list[[i]][3]
+  year2[i] <- list[[i]][4]
+  ssp[i] <- list[[i]][5]
+  ssps[i] <- substr(ssp[[i]], 1, 6)
+}
 range_list <- c()
 long_min <- c()
 long_max <- c()
@@ -490,7 +505,7 @@ for (i in 1:length(list_predictions)){
   range_list[i] <- list_predictions[[i]]
   
 }
-range_df <- data.frame(range_list, long_min, long_max, lat_min, lat_max, pixels)
+range_df <- data.frame(range_list, name, year1, year2, ssps, long_min, long_max, lat_min, lat_max, pixels)
 
 write.csv(range_df,paste("ModelStatistics/species_range.csv",sep=""),sep="\t", row.names = FALSE)
 
