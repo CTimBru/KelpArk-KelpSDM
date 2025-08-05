@@ -14,6 +14,7 @@ require(ggplot2)
 require(virtualspecies)
 require(geosphere) #distm
 require(viridis)
+require(stringr)
 source("rvar/var.R")
 
 #Set a predictable random number generator seed for reproducibility.
@@ -170,7 +171,6 @@ nrow_nereocystis_2010_extracted <- nrow(nereocystis_2010_extracted)
 nrow_macrocystis_2010_extracted <- nrow(macrocystis_2010_extracted)
 
 #Generate a set of random points, three times the size of the number of rows in the extracted environmental data, within points_buffer
-#These are your background points
 nereocystis_2010_background_points <- sf::st_sample(Pacific, size=nrow_nereocystis_2010_extracted*3)
 macrocystis_2010_background_points <- sf::st_sample(Pacific, size=nrow_macrocystis_2010_extracted*3)
 
@@ -204,7 +204,7 @@ nereocystis_2010_bg_extracted$presence <- as.factor(nereocystis_2010_bg_extracte
 macrocystis_2010_bg_extracted$presence <- as.factor(macrocystis_2010_bg_extracted$presence)
 
 #Model Selection
-selectedTaxa <- California_taxa[[1]]
+selectedTaxa <- California_taxa[[2]]
 
 if(selectedTaxa == California_taxa[[1]]){
   presence_extracted <- nereocystis_2010_extracted
@@ -443,6 +443,7 @@ raster_future_df <- as.data.frame(raster(paste("decadalPredictions/",selectedTax
 #Rename the third column of this data frame to value
 names(raster_future_df)[3] <- "value"
 
+i_max <- 100
 #Remove elements from this data frame if the value column is less than or equal to the value of 0.5*i_max.
 raster_future_points <- subset(raster_future_df, value > 0.5*i_max)
 
@@ -467,11 +468,10 @@ year2 <- c()
 ssp <- c()
 ssps <- c()
 i<-1
-for (i in 1:50)
-{
+for (i in 1:50) {
   name[i] <-list[[i]][1]
   year1[i] <- list[[i]][3]
-  year2[i] <- list[[i]][4]
+  year2[i] <- as.numeric(gsub("([0-9]+).*$", "\\1", list[[i]][4]))
   ssp[i] <- list[[i]][5]
   ssps[i] <- substr(ssp[[i]], 1, 6)
 }
@@ -482,7 +482,6 @@ lat_min <- c()
 lat_max <- c()
 pixels <- c()
 i <- 1
-i_max <- 100
 for (i in 1:length(list_predictions)){
   # Load each raster as a data frame
   raster_df <- as.data.frame(raster(paste("decadalPredictions/",list_predictions[[i]],sep="")), xy = TRUE)
@@ -507,5 +506,83 @@ for (i in 1:length(list_predictions)){
 }
 range_df <- data.frame(range_list, name, year1, year2, ssps, long_min, long_max, lat_min, lat_max, pixels)
 
-write.csv(range_df,paste("ModelStatistics/species_range.csv",sep=""),sep="\t", row.names = FALSE)
+range_df <- range_df %>% replace(is.na(.), "Current")
 
+#rbind in duplicates of the 'current data' to be the starting point of each of the modls
+current_range_df_dupe <- range_df[range_df$ssps == 'Current',]
+
+#rbind in the new rows twice (once for each model)
+i<-1
+num_rbind <- length(economic_pathways)
+for(i in i:num_rbind){
+  print(i)
+  current_range_df_dupe$ssps <- economic_pathways[i]
+  range_df <- rbind(range_df,current_range_df_dupe)
+}
+
+range_df <- range_df[range_df$ssps != 'Current',]
+
+write.csv(range_df,paste("ModelStatistics/species_range.csv",sep=""), row.names = FALSE)
+
+#Range Plots Extents
+boundaries <- c("North","South","East","West")
+latlong <- c("lat_max","lat_min","long_max","long_min")
+j<- 1
+for (j in j:length(California_taxa)){
+  which_species <- strsplit(California_taxa[j], "_")[[1]]
+  species_df <- range_df[range_df$name == which_species[1],]
+  k<- 1
+  for (k in k:length(latlong)){
+    print(k)
+    ggplot(species_df, aes(x = year2, y = species_df[,latlong[k]], color = ssps)) +
+      geom_point() +
+      geom_smooth(method = "lm", se = FALSE) + # Add best-fit lines (linear model, no confidence interval)
+      labs(title = paste("Maximal",boundaries[k],"Extent vs. Decade by SSP for",str_to_title(which_species[1]),str_to_title(which_species[2])),
+           x = "Decade",
+           y = "Degrees",
+           color = "SSP") # Customize legend title
+    ggsave(filename=paste("ModelStatistics/",California_taxa[j],"_",latlong[k],"_extent_shift",".png",sep=""),plot=last_plot(),height=1044,width=1760,units=c("px"),dpi=100)
+  }
+}
+
+#Get lists of all current environmental rasters in tif format.
+list_refugia <- list.files(path="decadalPredictions",pattern=paste("^",selectedTaxa,".*2090_2100.*\\.tif$",sep=""))
+
+#Build a raster stack of all 2090-2100 predictions
+refugia_layer <- stack(paste("decadalPredictions/",list_refugia,sep=""))
+
+#Sum the model outputs of the three SSPs
+refugia_predict <- calc(refugia_layer, sum)
+
+#Get geographic range of predicted taxon occurrences
+refugia_predict_df <- as.data.frame(refugia_predict, xy = TRUE)
+
+#Rename the third column of this data frame to value
+names(refugia_predict_df)[3] <- "value"
+
+refugia_predict_df <- refugia_predict_df[refugia_predict_df$value == 300,]
+
+writeRaster(rasterFromXYZ(refugia_predict_df),paste("refugia/",selectedTaxa,"refugia_2090_2100.tif",sep=""), bylayer=FALSE,overwrite=TRUE)
+
+
+ggplot() +
+  geom_raster(data = refugia_predict_df, aes(x = x, y = y, fill = value)) +
+  scale_fill_gradient(low = "lightblue", high = "lightblue", na.value = "grey") +
+  guides(fill = "none") +
+  geom_point(data = refugia_predict_df, aes(x = x, y = y, color = value), size = 1) +
+  scale_color_viridis_c() +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = paste("Predicted occurrences of\n",gsub("_"," ",selectedTaxa)," (2020)",sep=""),
+       x="Longitude degrees East",y = "Latitude degrees North",
+       color = paste("Predicted frequency\nout of ",i_max," models",sep=""))+
+  theme(legend.position = "bottom")
+
+ggsave(filename=paste("ModelStatistics/",selectedTaxa,"_2090_2100_refugia",".png",sep=""),plot=last_plot(),height=1044,width=1760,units=c("px"),dpi=100)
+
+#Load 15 arc-sec bathometry data
+bathymetry_clip_layer <- raster("ncTemp/UncroppedTIFs/bathometry_15_arcsec.tif")
+
+values(bathymetry_clip_layer) <- ifelse(values(bathymetry_clip_layer) <= -100 | values(bathymetry_clip_layer) >= 1, 0, 1)
+
+writeRaster(bathymetry_clip_layer,"MapLayers/bathometry_15_arcsec_crop.tif", bylayer=FALSE,overwrite=TRUE)

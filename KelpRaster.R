@@ -119,7 +119,7 @@ download_layers(dataset_id, variables, constraints, fmt = "raster", directory = 
 #Terrain Characteristics
 model_year_string <- '1970-01-01T00:00:00Z'
 time <- c(model_year_string,model_year_string)
-variables <- c("bathymetry_mean")
+variables <- c("bathymetry_min")
 dataset_id <- "terrain_characteristics"
 constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
