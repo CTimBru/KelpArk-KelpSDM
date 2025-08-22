@@ -1,4 +1,6 @@
+# Clear all variables from the current environment to ensure a clean start.
 rm(list=ls())
+# Load required packages
 require(data.table)
 require(sf)
 require(raster)
@@ -12,7 +14,7 @@ require(DescTools)
 require(geodata)
 require(ggplot2)
 require(virtualspecies)
-require(geosphere) #distm
+require(geosphere)  #Used for the distm function to calculate distances.
 require(viridis)
 require(stringr)
 source("rvar/var.R")
@@ -76,37 +78,6 @@ macrocystis_occurrence_data <- macrocystis_occurrence_data[macrocystis_keep, ]
 nereocystis_coords <- nereocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
 macrocystis_coords <- macrocystis_occurrence_data[, c("decimalLongitude", "decimalLatitude")]
 
-#Check if any two coords are exactly equal
-#nereocystis_equal_coords <- duplicated(nereocystis_coords)
-#macrocystis_equal_coords <- duplicated(macrocystis_coords)
-
-#Switch trues to false, we want to keep non-duplicates
-#i <- 1
-#for(dupe in nereocystis_equal_coords){
-  #if(dupe == TRUE){
-  #  dupe <- FALSE
-  #} else {
-  #  dupe <- TRUE
-  #}
-  #nereocystis_equal_coords[[i]] <- dupe
-  #i <- i+1
-#}
-#i <- 1
-#for(dupe in macrocystis_equal_coords){
-  #if(dupe == TRUE){
-  #  dupe <- FALSE
-  #} else {
-  #  dupe <- TRUE
-  #}
-  #macrocystis_equal_coords[[i]] <- dupe
-  #i <- i+1
-#}
-
-
-#Remove duplicates
-#nereocystis_occurrence_data <- nereocystis_occurrence_data[nereocystis_equal_coords, ]
-#macrocystis_occurrence_data <- macrocystis_occurrence_data[macrocystis_equal_coords, ]
-
 #Convert species data to a spatial points object
 nereocystis_species_points_2010 <- st_as_sf(nereocystis_occurrence_data, coords=c("decimalLongitude","decimalLatitude"), crs = 4326)
 macrocystis_species_points_2010 <- st_as_sf(macrocystis_occurrence_data, coords=c("decimalLongitude","decimalLatitude"), crs = 4326)
@@ -136,13 +107,6 @@ for(layer in list_baseline_2010){
 #Update raster stack names for current and future environmental raster stacks so they match the environmental layer name
 names(env_layer_2010) <- list_baseline_2010
 names(env_layer_static) <- list_static
-
-#Filter collinear environmental variables using current environmental raster stack.
-#Use a 0.75 Spearman correlation threshold, and 1000 background points, as per https://onlinelibrary.wiley.com/doi/pdf/10.1002/ece3.10901
-#env_retain <- removeCollinearity(env_layer_2010,method='spearman',multicollinearity.cutoff = 0.75, sample.points = TRUE, nb.points=10000, select.variables=TRUE)
-
-#Select subset of layers
-#env_layer_2010 <- subset(env_layer_2010, subset=env_retain)
 
 #Build a raster stack of all current environmental rasters using just the filtered layers.
 env_layer_2010 <- stack(env_layer_2010,env_layer_static)
@@ -206,6 +170,7 @@ macrocystis_2010_bg_extracted$presence <- as.factor(macrocystis_2010_bg_extracte
 #Model Selection
 selectedTaxa <- California_taxa[[2]]
 
+# Assign the appropriate presence and background data frames based on the selected taxon.
 if(selectedTaxa == California_taxa[[1]]){
   presence_extracted <- nereocystis_2010_extracted
   background_extracted <- nereocystis_2010_bg_extracted
@@ -229,7 +194,9 @@ partial_plot_list <- c()
 rf1_list <- c()
 j <- 1
 i <- 1
+# Set the number of model iterations
 i_max <- 100
+# This for loop builds an ensemble of 100 random forest models
 for(i in 1:i_max){
   print(paste("beginning run:",i,sep=" "))
   #Create a subset of the presence/background data with the following properties:
@@ -353,7 +320,7 @@ ggplot(partial_plots, aes(x=!!sym(names(env_layer_2010[[k]])), y='Detection_Prob
   stat_smooth(aes(y = 'Detection_Probability', fill='Detection_Probability'),method="auto",formula=y~x,color="violet",fill="red",n=0.1*sum(!is.na(partial_plots[,names(env_layer_2010[[k]])])))+
   theme_bw(base_size=25)
 
-#Levi
+#Combine the partial plot data from all runs into a single data frame and save it.
 partial_plots <- rbind.fill(partial_plot_list)
 partial_plots <- as.data.frame(partial_plots)
 write.table(partial_plots,paste("ModelStatistics/",selectedTaxa,"_partial_plots.txt",sep=""),quote=FALSE,sep="\t",row.names = FALSE)
@@ -397,8 +364,6 @@ for(prediction_year in prediction_years) {
     #Update raster stack names for current and future environmental raster stacks so they match the environmental layer name
     names(env_layer_future) <- list_future
     
-    #Select subset of layers
-    #env_layer_future <- subset(env_layer_future, subset=env_retain)
     
     #Build a raster stack of all future environmental rasters using just the filtered layers.
     env_layer_future <- stack(env_layer_future,env_layer_static)
@@ -424,18 +389,8 @@ for(prediction_year in prediction_years) {
     writeRaster(future_raster_predict,paste("decadalPredictions/",selectedTaxa,"_",prediction_year,"_",prediction_year+10,"_",pathway,".tif",sep=""),overwrite=T)
     
   }
-  
-  #Plot prediction raster
-  
 }
 
-# Convert the prediction frequency raster for the future kelp model to data frame
-
-#Set the third column name in this data frame to value
-
-#Remove elements from this data frame if the value column is less than or equal to the value of 0.5*i_max.
-
-#Plot prediction raster
 
 #Get geographic range of predicted taxon occurrences
 raster_future_df <- as.data.frame(raster(paste("decadalPredictions/",selectedTaxa,"_2010_2020.tif", sep="")), xy = TRUE)
@@ -447,6 +402,7 @@ i_max <- 100
 #Remove elements from this data frame if the value column is less than or equal to the value of 0.5*i_max.
 raster_future_points <- subset(raster_future_df, value > 0.5*i_max)
 
+#Plot prediction raster
 ggplot() +
   geom_raster(data = raster_future_df, aes(x = x, y = y, fill = value)) +
   scale_fill_gradient(low = "lightblue", high = "lightblue", na.value = "grey") +
@@ -460,6 +416,7 @@ ggplot() +
        color = paste("Predicted frequency\nout of ",i_max," models",sep=""))+
   theme(legend.position = "bottom")
 
+# Get a list of all prediction rasters and parse their filenames to extract metadata (species, year, ssp).
 list_predictions <- list.files(path="decadalPredictions",pattern = "\\.tif$")
 list <- strsplit(list_predictions, "_")
 name <- c()
@@ -475,6 +432,7 @@ for (i in 1:50) {
   ssp[i] <- list[[i]][5]
   ssps[i] <- substr(ssp[[i]], 1, 6)
 }
+# Initialize vectors to store range metrics.
 range_list <- c()
 long_min <- c()
 long_max <- c()
@@ -482,6 +440,8 @@ lat_min <- c()
 lat_max <- c()
 pixels <- c()
 i <- 1
+
+# Loop through each prediction raster file.
 for (i in 1:length(list_predictions)){
   # Load each raster as a data frame
   raster_df <- as.data.frame(raster(paste("decadalPredictions/",list_predictions[[i]],sep="")), xy = TRUE)
@@ -502,16 +462,18 @@ for (i in 1:length(list_predictions)){
   pixels[i] <- RangePixels[[1]]
   
   range_list[i] <- list_predictions[[i]]
-  
 }
+
+# Combine all range metrics and metadata into a single data frame.
 range_df <- data.frame(range_list, name, year1, year2, ssps, long_min, long_max, lat_min, lat_max, pixels)
 
+# Standardize the label for the current period prediction.
 range_df <- range_df %>% replace(is.na(.), "Current")
 
-#rbind in duplicates of the 'current data' to be the starting point of each of the modls
+# Duplicate the 'Current' data row to serve as the baseline (starting point) for each SSP scenario.
 current_range_df_dupe <- range_df[range_df$ssps == 'Current',]
 
-#rbind in the new rows twice (once for each model)
+# Duplicate the 'Current' data row to serve as the baseline (starting point) for each SSP scenario.
 i<-1
 num_rbind <- length(economic_pathways)
 for(i in i:num_rbind){
@@ -520,8 +482,10 @@ for(i in i:num_rbind){
   range_df <- rbind(range_df,current_range_df_dupe)
 }
 
+# Remove the original 'Current' rows, leaving only the SSP-specific baselines.
 range_df <- range_df[range_df$ssps != 'Current',]
 
+# Save the final range shift data.
 write.csv(range_df,paste("ModelStatistics/species_range.csv",sep=""), row.names = FALSE)
 
 #Range Plots Extents
@@ -560,11 +524,13 @@ refugia_predict_df <- as.data.frame(refugia_predict, xy = TRUE)
 #Rename the third column of this data frame to value
 names(refugia_predict_df)[3] <- "value"
 
+# Filter to keep only the pixels that are robust refugia (value of 300).
 refugia_predict_df <- refugia_predict_df[refugia_predict_df$value == 300,]
 
+# Save the refugia locations as a new raster file.
 writeRaster(rasterFromXYZ(refugia_predict_df),paste("refugia/",selectedTaxa,"refugia_2090_2100.tif",sep=""), bylayer=FALSE,overwrite=TRUE)
 
-
+# Plot the identified climate refugia.
 ggplot() +
   geom_raster(data = refugia_predict_df, aes(x = x, y = y, fill = value)) +
   scale_fill_gradient(low = "lightblue", high = "lightblue", na.value = "grey") +
@@ -583,6 +549,26 @@ ggsave(filename=paste("ModelStatistics/",selectedTaxa,"_2090_2100_refugia",".png
 #Load 15 arc-sec bathometry data
 bathymetry_clip_layer <- raster("ncTemp/UncroppedTIFs/bathometry_15_arcsec.tif")
 
+# Create a binary mask to represent potential kelp habitat depth (-100m to 1m).
+# Values within this range become 1, all others become 0.
 values(bathymetry_clip_layer) <- ifelse(values(bathymetry_clip_layer) <= -100 | values(bathymetry_clip_layer) >= 1, 0, 1)
 
+# Save the depth mask raster.
 writeRaster(bathymetry_clip_layer,"MapLayers/bathometry_15_arcsec_crop.tif", bylayer=FALSE,overwrite=TRUE)
+
+# Loop through each species to plot the change in suitable habitat area (total number of pixels) over time for each SSP.
+j<- 1
+k<- 1
+for (j in j:length(California_taxa)){
+  which_species <- strsplit(California_taxa[j], "_")[[1]][j]
+  species_df <- range_df[range_df$name == which_species[2],]
+  ggplot(species_df, aes(x = year2, y=pixels, color=ssps)) +
+    geom_point() +
+    geom_smooth(method = "lm", se =FALSE) +
+    labs(title=paste("Pixels vs. Decade by SSP"),
+         x="Decade",
+         y="Pixels",
+         color="SSP")
+  ggsave(filename=paste("ModelStatistics/",California_taxa[j],"_pixel.png",sep=""),plot=last_plot(),height=1044,width=1760,units=c("px"),dpi=100)
+}
+

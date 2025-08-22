@@ -1,4 +1,7 @@
+# Clear all variables from the current environment to ensure a clean start.
 rm(list=ls())
+
+# Load required packages
 require(data.table)
 require(raster)
 require(sf)
@@ -15,9 +18,6 @@ set.seed(1)
 #Set working directory
 #RVar_wd should be stored in rvar/var.R
 setwd(RVar_wd)
-
-#Check the names of the available layers
-#available_layers <- list_layers()
 
 #Data Set of variables, which change with respect to time
 datasets_temporal <- c('chl_baseline_2000_2018_depthsurf', #Chlorophyll
@@ -92,7 +92,7 @@ datasets_static <- c(
         'kdpar_mean_baseline_2000_2020_depthsurf' #Diffuse Attenuation
 				)
 
-#Slightly larger than required:
+#Defines the geographic extent for data download. This bounding box is slightly larger than the final cropping area to ensure edge data is included.
 #22.89 - 46.25
 latitude <- c(22.80, 46.30)
 #-124.5 - -144.1
@@ -103,6 +103,8 @@ model_year_string <- '2010-01-01T00:00:00Z'
 time <- c(model_year_string,model_year_string)
 variables <- c("par_mean_mean")
 dataset_id <- "par_mean_baseline_2000_2020_depthsurf"
+
+#Creates a named list of constraints (time, lat, lon) to pass to the download function.
 constraints <- list(time, latitude, longitude)
 names(constraints) <- c("time", "latitude", "longitude")
 download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
@@ -128,7 +130,7 @@ download_layers(dataset_id, variables, constraints, fmt = "raster", directory = 
 
 nc_dir <- paste(RVar_wd,"ncTemp",sep="")
 
-#Logic Needs adjusting to handle future decades, three separate ssp
+#This is the main loop for downloading the time-series data defined in `datasets_temporal`.
 layer_names <- c()
 i<-1
 for(dataset_id in datasets_temporal){
@@ -138,7 +140,7 @@ for(dataset_id in datasets_temporal){
   model_name <- split_name[[1]][[2]]
   model_year <- split_name[[1]][[3]]
   model_depth <- split_name[[1]][[5]]
-
+# block sets the specific variable names to download.
   if(model_depth == "depthsurf") {
     if(model_var == "thetao"){
       variables <- c(paste(model_var,"_min",sep=""),paste(model_var,"_mean",sep=""),paste(model_var,"_max",sep=""))
@@ -148,7 +150,7 @@ for(dataset_id in datasets_temporal){
   } else {
     variables <- c(paste(model_var,"_mean",sep=""))
   }
-  
+  # Sets the final year for the while loop based on the scenario.
   if(model_name == "baseline") {
     model_year_max <- model_year+10
   } else {
@@ -157,15 +159,17 @@ for(dataset_id in datasets_temporal){
   
   while(model_year <= model_year_max){
     print(model_year)
-    #Year Dependent Stuff
+    # Creates the time string required by Bio-ORACLE for the specific year.
     model_year_string <- paste(model_year,'-01-01T00:00:00Z',sep='')
-    #Get select a year of interest
+    #Assembles the constraints list for the current iteration.
     time <- c(model_year_string,model_year_string)
     constraints <- list(time, latitude, longitude)
     names(constraints) <- c("time", "latitude", "longitude")
+    #Creates a descriptive file name for the downloaded layer.
     layer_names[i] <- paste(model_name,"_",model_year,"_",
                             model_year+10,
                             "_",variables[1],"_",model_depth,sep="")
+    #rename the downloaded file to the descriptive name created earlier
     download_layers(dataset_id, variables, constraints, fmt = "raster", directory = nc_dir)
     nc_files_table <- file.info(list.files(nc_dir,pattern="*.nc", full.names = T))
     latest_file <- rownames(nc_files_table)[which.max(nc_files_table$ctime)]
